@@ -16,11 +16,11 @@ public class PortalWorld : EditorWindow
 
     private VRC_PortalMarker portal;
     private VRC_SceneDescriptor world;
+    private string blueprintId;
     private string worlds;
 
     public void OnEnable()
     {
-        worlds = "Paste World IDs here. One per line.";
         portal = AssetDatabase.LoadAssetAtPath<VRC_PortalMarker>("Assets\\VRCSDK\\Prefabs\\World\\VRCPortalMarker.prefab");
         if (portal == null)
         {
@@ -38,24 +38,33 @@ public class PortalWorld : EditorWindow
     }
     public void OnGUI()
     {
-        worlds = EditorGUILayout.TextArea(worlds, GUILayout.Height(position.height - 30));
+        GUILayout.Label("Paste world ids below. One per line.");
+        worlds = EditorGUILayout.TextArea(worlds, GUILayout.Height(position.height - 80));
+        GUILayout.Label("Optional Blueprint ID");
+        blueprintId = EditorGUILayout.TextField(blueprintId);
         if (GUILayout.Button("Generate")) generateWorld();
     }
 
     public void generateWorld()
     {
-
+        // Delete any/all portal or scene descriptors first.
         foreach(var portal in GameObject.FindObjectsOfType<VRC_PortalMarker>())
         {
             DestroyImmediate(portal.gameObject);
         }
 
-        if (GameObject.FindObjectsOfType<VRC_SceneDescriptor>().Length == 0)
+        foreach(var existingScene in GameObject.FindObjectsOfType<VRC_SceneDescriptor>())
         {
-            // Start the spawn back a little bit. Portals are from (0,0,0) to (whatever, 0, 0);
-            Instantiate(world, new Vector3(0,0,-2), Quaternion.identity);
+            DestroyImmediate(existingScene.gameObject);
         }
+        
 
+        // Start the spawn back a little bit. Portals are from (0,0,0) to (whatever, 0, 0);
+        VRC_SceneDescriptor scene = Instantiate(world, new Vector3(0,0,-2), Quaternion.identity);
+        if(blueprintId != null)
+            scene.GetComponent<PipelineManager>().blueprintId = blueprintId;
+        
+        // Place all the portals
         Vector3 position = Vector3.zero;
         Vector3 step = new Vector3(2, 0, 0);
         
@@ -76,12 +85,12 @@ public class PortalWorld : EditorWindow
             position += step;
         }
 
+        // Setup the plane.
         GameObject plane = GameObject.Find("Plane");
         if (plane == null)
         {
             plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
         }
-
         
         plane.transform.position = (position - step) / 2 - new Vector3(0,0,2); 
         plane.transform.localScale = position / 2 * .1f + Vector3.one;
